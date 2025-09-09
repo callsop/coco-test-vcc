@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - '*'
+  pull_request:
+    branches:
+      - main
+      - '*'
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .
+
+  # Configuration type to build.
+  BUILD_CONFIGURATION: Release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Setup Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@release/v1
+
+    - uses: actions/checkout@v4
+
+    - name: Install Jam
+      uses: robinraju/release-downloader@v1
+      with:
+        repository: callsop/perforce-jam
+        fileName: jam-*.zip
+        latest: true
+        extract: true
+        out-file-path: .
+
+    - name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: jam.exe 
+
+
+
