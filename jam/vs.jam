@@ -3,12 +3,18 @@
 # microsoft visual studio
 #
 
-VS = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC" ;
+
+VS = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC" ;
+
+if ! [ Exists $(VS) ]
+{
+	VS = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC" ;
+}
 
 rule CheckVS
 {
     local check = $(>:E=$(VS)) ;
-    if ! [ Exists $(check) ]
+    if ! [ Exists $(check) ] 
     {
         Echo "Microsoft Visual Studio $(<) not found at:" ;
         Echo $(check) ;
@@ -23,7 +29,7 @@ rule CheckVS
     }
 }
 
-CheckVS ;
+CheckVS $(VC) ;
 
 # uncomment this to use a specific version:
 # VS_VER = 14.42.34433 ;
@@ -53,7 +59,7 @@ CheckVS ;
 #
 
 LINK = "$(VS)\\bin\\Hostx86\\x86\\link.exe" ;
-LINKFLAGS += /nologo /subsystem:windows ;
+LINKFLAGS += /nologo /subsystem:windows /machine:X86 ;
 LINKPATH += "$(VS)\\lib\\x86" ;
 
 # as the library paths have spaces, use an environment variable and quote executable

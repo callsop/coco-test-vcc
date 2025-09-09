@@ -27,8 +27,12 @@ jobs:
     steps:
     - name: Setup Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@release/v1
+      with:
+        arch: win32
 
     - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
 
     - name: Install Jam
       uses: robinraju/release-downloader@v1
@@ -37,11 +41,12 @@ jobs:
         fileName: jam-*.zip
         latest: true
         extract: true
-        out-file-path: .
+        out-file-path: bin
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: jam.exe 
+      run:  |
+        bin/jam.exe
 
 
 

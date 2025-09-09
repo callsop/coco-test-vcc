@@ -3,6 +3,7 @@
 #
 LINKLIBS = ;
 LINKFLAGS = ;
+INCLUDE = ;
 
 #
 # build targetname from sources using 'cfg' environment
