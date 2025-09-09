@@ -4,9 +4,16 @@
 
 SubDir TOP ;
 
+# all configurations to build
+CONFIGS = debug release directx opengl dbgaudio ;
+
 # locate output targets here
-LOCATE_TARGET on debug = [ FDirName $(SUBDIR) build debug ] ;
-LOCATE_TARGET on release = [ FDirName $(SUBDIR) build release ] ;
+rule SetLocateTarget cfg
+{
+	LOCATE_TARGET on $(cfg) = [ FDirName $(SUBDIR) build $(cfg) ] ;
+}
+
+ForEachConfig $(CONFIGS) : SetLocateTarget ;
 
 # set where the sources are located
 SEARCH_SOURCE = VCC ;
@@ -25,12 +32,23 @@ SRCS += $(RESOURCE_SRC) ;
 # collect all roms
 ROMS = [ Glob [ FDirName $(SUBDIR) roms ] : *.rom ] ;
 
+# extra includes for vcc
 3RDPARTY = [ FDirName $(SUBDIR) VCC 3rdParty ] ;
 
+# libraries required
 SubDirLinkLibs kernel32.lib user32.lib gdi32.lib dsound.lib ddraw.lib ;
 SubDirLinkLibs dinput8.lib dxguid.lib winmm.lib shell32.lib comdlg32.lib ;
 SubDirLinkLibs comctl32.lib ;
 SubDirC++Flags /I$(3RDPARTY) /D_CRT_SECURE_NO_WARNINGS ;
+
+# configuration specific compilation flags
+SUBDIRC++FLAGS on directx = /DUSE_OPENGL=false [ on release return $(SUBDIRC++FLAGS) ] ;
+SUBDIRC++FLAGS on opengl = /DUSE_DIRECTX=false [ on release return $(SUBDIRC++FLAGS) ] ;
+SUBDIRC++FLAGS on dbgaudio = /DUSE_DEBUG_AUDIOTAPE=true [ on release return $(SUBDIRC++FLAGS) ] ;
+
+# copy default release/debug settings
+C++FLAGS on directx opengl = [ on release return $(C++FLAGS) ] ;
+C++FLAGS on dbgaudio = [ on debug return $(C++FLAGS) ] ;
 
 rule MakeResource cfg
 {
@@ -93,9 +111,9 @@ rule UserObject
 }
 
 # build main debug/release versions
-ConfigMain debug release : vcc : $(SRCS) ;
+ConfigMain $(CONFIGS) : vcc : $(SRCS) ;
 
 # build extras needed
-ForEachConfig debug release : MakeExtras ;
+ForEachConfig $(CONFIGS) : MakeExtras ;
 
 
