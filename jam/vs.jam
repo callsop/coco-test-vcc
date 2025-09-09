@@ -29,7 +29,7 @@ rule CheckVS
     }
 }
 
-CheckVS $(VC) ;
+CheckVS ;
 
 # uncomment this to use a specific version:
 # VS_VER = 14.42.34433 ;
@@ -59,7 +59,7 @@ CheckVS ;
 #
 
 LINK = "$(VS)\\bin\\Hostx86\\x86\\link.exe" ;
-LINKFLAGS += /nologo /subsystem:windows /machine:X86 ;
+LINKFLAGS += /nologo /subsystem:windows ;
 LINKPATH += "$(VS)\\lib\\x86" ;
 
 # as the library paths have spaces, use an environment variable and quote executable
@@ -75,8 +75,8 @@ actions Link bind NEEDLIBS
 #
 
 C++FLAGS = /nologo /FS /Gd /Zi /std:c++20 /W3 /EHsc ;
-C++FLAGS on debug = $(C++FLAGS) /MDd /Od ;
-C++FLAGS on release = $(C++FLAGS) /MD /O2 ;
+C++FLAGS on debug = $(C++FLAGS) /MDd /Od /D_DEBUG ;
+C++FLAGS on release = $(C++FLAGS) /MD /O2 /DNDEBUG ;
 
 C++ = "$(VS)\\bin\\Hostx86\\x86\\cl.exe" ;
 INCLUDE += $(VS)\\include ;

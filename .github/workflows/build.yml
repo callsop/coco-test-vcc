@@ -45,8 +45,7 @@ jobs:
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run:  |
-        bin/jam.exe
+      run: bin/jam.exe -j4
 
 
 
