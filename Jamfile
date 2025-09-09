@@ -1,0 +1,101 @@
+#################################################################
+# vcc build
+#################################################################
+
+SubDir TOP ;
+
+# locate output targets here
+LOCATE_TARGET on debug = [ FDirName $(SUBDIR) build debug ] ;
+LOCATE_TARGET on release = [ FDirName $(SUBDIR) build release ] ;
+
+# set where the sources are located
+SEARCH_SOURCE = VCC ;
+
+# resource file
+RESOURCE = [ Glob [ FDirName $(SUBDIR) $(SEARCH_SOURCE) ] : *.rc ] ;
+RESOURCE = $(RESOURCE:BS) ;
+
+# name used for linking
+RESOURCE_SRC = res-$(RESOURCE) ;
+
+# collect the sources
+SRCS = [ Glob [ FDirName $(SUBDIR) $(SEARCH_SOURCE) ] : *.cpp ] ;
+SRCS += $(RESOURCE_SRC) ;
+
+# collect all roms
+ROMS = [ Glob [ FDirName $(SUBDIR) roms ] : *.rom ] ;
+
+3RDPARTY = [ FDirName $(SUBDIR) VCC 3rdParty ] ;
+
+SubDirLinkLibs kernel32.lib user32.lib gdi32.lib dsound.lib ddraw.lib ;
+SubDirLinkLibs dinput8.lib dxguid.lib winmm.lib shell32.lib comdlg32.lib ;
+SubDirLinkLibs comctl32.lib ;
+SubDirC++Flags /I$(3RDPARTY) /D_CRT_SECURE_NO_WARNINGS ;
+
+rule MakeResource cfg
+{
+	local rc = [ FGristFiles $(RESOURCE_SRC) ] ;
+
+	File $(rc) : $(RESOURCE) ;
+	Depends $(rc) : $(RESOURCE) ;
+	MakeLocate $(rc) : $(LOCATE_TARGET) ;
+
+	Clean clean : $(rc) ;
+}
+
+rule MakeRom
+{
+	File $(<) : $(>) ;
+	Depends $(<) : $(>) ;
+	MakeLocate $(<) : $(LOCATE_TARGET) ;
+	Depends roms $(cfg) : $(<) ;
+	Clean clean : $(<) ;
+}
+
+rule MakeRoms
+{
+	local rom ;
+	for rom in $(ROMS)
+	{
+		MakeRom [ FGristFiles $(rom:BS) ] : $(rom) ;
+	}
+	NotFile roms ;
+}
+
+rule MakeExtras cfg
+{
+    # set sources grist based on config
+    local SOURCE_GRIST = $(cfg) ;
+
+	MakeResource $(cfg) ;
+	MakeRoms $(cfg) ;
+}
+
+rule Rc
+{
+	Depends $(<) : $(>) ;
+	Depends res : $(<) ;
+	NotFile res ;
+	FLAGS on $(<) = /nologo /I 0x0409 ;
+	INCLUDES on $(<) = $(WINSDK_INC) ;
+	MakeLocate $(<) : $(LOCATE_TARGET) ;
+}
+
+actions Rc
+{
+	set INCL= /I"$(INCLUDES)" /I"$(SEARCH_SOURCE)"
+	"$(RC)" $(FLAGS) %INCL% /fo$(<) $(>)
+}
+
+rule UserObject
+{
+	Rc $(<) : $(>) ;
+}
+
+# build main debug/release versions
+ConfigMain debug release : vcc : $(SRCS) ;
+
+# build extras needed
+ForEachConfig debug release : MakeExtras ;
+
+

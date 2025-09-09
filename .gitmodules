@@ -1,0 +1,3 @@
+[submodule "VCC"]
+	path = VCC
+	url = https://github.com/VCCE/VCC.git
