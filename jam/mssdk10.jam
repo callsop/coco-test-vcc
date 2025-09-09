@@ -20,7 +20,7 @@ if ! [ Exists $(WINSDK) ]
 if ! $(WINSDK_VER) 
 {
     local versions = [ Glob $(WINSDK)\\Lib\\ : * ] ;
-    versions = [ Reverse [ Exclude . .. : $(versions:BS) ] ] ;
+    versions = [ Reverse [ Exclude . .. wdf : $(versions:BS) ] ] ;
     if $(versions)
     {
 
