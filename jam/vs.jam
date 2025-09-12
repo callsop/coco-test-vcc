@@ -74,7 +74,7 @@ actions Link bind NEEDLIBS
 # c++ defaults
 #
 
-C++FLAGS = /nologo /FS /Gd /Zi /std:c++20 /W3 /EHsc /Zc:strictStrings- ;
+C++FLAGS = /nologo /FS /Gd /Zi /std:c++17 /W3 /EHsc /Zc:strictStrings- ;
 C++FLAGS on debug = $(C++FLAGS) /MDd /Od /D_DEBUG ;
 C++FLAGS on release = $(C++FLAGS) /MD /O2 /DNDEBUG ;
 

@@ -1,19 +1,32 @@
+
+#################################################################
+# common rules
+#################################################################
+
+# all configurations to build
+CONFIGS = debug release directx opengl dbgaudio logging ;
+
+rule SubDirSetup
+{
+	# locate output targets for each config
+	rule SetLocateTarget cfg
+	{
+		LOCATE_TARGET on $(cfg) = [ FDirName build $(cfg) $(SUBDIR_TOKENS) ] ;
+	}
+
+	ForEachConfig $(CONFIGS) : SetLocateTarget ;
+
+	# reset all subdir options to default
+	SUBDIR$(SUBDIRRESET) on $(CONFIGS) = ;
+}
+
+SUBDIRRULES = SubDirSetup ;
+
 #################################################################
 # vcc build
 #################################################################
 
 SubDir TOP ;
-
-# all configurations to build
-CONFIGS = debug release directx opengl dbgaudio logging ;
-
-# locate output targets here
-rule SetLocateTarget cfg
-{
-	LOCATE_TARGET on $(cfg) = [ FDirName build $(cfg) $(SUBDIR_TOKENS) ] ;
-}
-
-ForEachConfig $(CONFIGS) : SetLocateTarget ;
 
 # set where the sources are located
 SEARCH_SOURCE = VCC ;
@@ -27,17 +40,20 @@ ROMS = [ Glob roms : *.rom ] ;
 # extra includes for vcc
 3RDPARTY = [ FDirName VCC 3rdParty ] ;
 
+Promote SUBDIRC++FLAGS : $(CONFIGS) ;
+Promote SUBDIRC++FLAGS : directx opengl : release ;
+Promote SUBDIRC++FLAGS : dbgaudio logging : debug ;
+
 # libraries required
 SubDirLinkLibs kernel32.lib user32.lib gdi32.lib dsound.lib ddraw.lib ;
 SubDirLinkLibs dinput8.lib dxguid.lib winmm.lib shell32.lib comdlg32.lib ;
 SubDirLinkLibs comctl32.lib ;
-SubDirC++Flags /I$(3RDPARTY) /D_CRT_SECURE_NO_WARNINGS ;
 SubDirLinkFlags /SUBSYSTEM:WINDOWS ;
 
-Promote C++FLAGS SUBDIRC++FLAGS : directx opengl : release ;
-Promote C++FLAGS SUBDIRC++FLAGS : dbgaudio logging : debug ;
+Promote SUBDIRLINKFLAGS SUBDIRLINKLIBS : $(CONFIGS) ;
 
 # configuration specific compilation flags
+ConfigSubDirC++Flags $(CONFIGS) : /I$(3RDPARTY) /D_CRT_SECURE_NO_WARNINGS ;
 ConfigSubDirC++Flags directx : /DUSE_OPENGL=false ;
 ConfigSubDirC++Flags opengl : /DUSE_DIRECTX=false ;
 ConfigSubDirC++Flags dbgaudio : /DUSE_DEBUG_AUDIOTAPE=true ;
@@ -71,6 +87,8 @@ rule MakeExtras cfg
 
 	MakeRoms $(cfg) ;
 }
+
+echo $(SUBDIRC++FLAGS) ;
 
 # build main debug/release versions
 ConfigMain $(CONFIGS) : vcc : $(SRCS) ;
@@ -106,19 +124,20 @@ rule BuildDll name : shared : libs
 	local SHARED = [ Glob VCC : $(shared) ] ;
 	SRCS += $(SHARED) ;
 
-	ForEachConfig $(CONFIGS) : SetLocateTarget ;
+	Promote SUBDIRC++FLAGS : $(CONFIGS) ;
+	Promote SUBDIRC++FLAGS : directx opengl : release ;
+	Promote SUBDIRC++FLAGS : dbgaudio logging : debug ;
 
 	# libraries required
 	SubDirLinkLibs kernel32.lib user32.lib gdi32.lib dsound.lib ddraw.lib ;
 	SubDirLinkLibs dinput8.lib dxguid.lib winmm.lib shell32.lib comdlg32.lib ;
 	SubDirLinkLibs comctl32.lib $(libs) ;
-	SubDirC++Flags /D_CRT_SECURE_NO_WARNINGS ;
 	SubDirLinkFlags /DLL /DYNAMICBASE /SUBSYSTEM:CONSOLE ;
 
-	Promote C++FLAGS SUBDIRC++FLAGS : directx opengl : release ;
-	Promote C++FLAGS SUBDIRC++FLAGS : dbgaudio logging : debug ;
+	Promote SUBDIRLINKFLAGS SUBDIRLINKLIBS : $(CONFIGS) ;
 
 	# configuration specific compilation flags
+	ConfigSubDirC++Flags $(CONFIGS) : /D_CRT_SECURE_NO_WARNINGS ;
 	ConfigSubDirC++Flags directx : /DUSE_OPENGL=false ;
 	ConfigSubDirC++Flags opengl : /DUSE_DIRECTX=false ;
 	ConfigSubDirC++Flags dbgaudio : /DUSE_DEBUG_AUDIOTAPE=true ;
@@ -137,7 +156,7 @@ rule BuildDll name : shared : libs
 #
 
 BuildDll acia : logger.cpp DialogOps.cpp : ws2_32.lib ;
-BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
+#BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
 BuildDll fd502 : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
 BuildDll gmc ;
 BuildDll orch90 : Fileops.cpp ;

@@ -90,11 +90,22 @@ SUBDIRRESET += LINKFLAGS LINKLIBS ;
 rule Promote flags : to : from
 {
 	local f ;
-	for f in $(flags)
+	if $(from)
 	{
-		$(f) on $(to) += [ on $(from) return $($(f)) ] ;
+		for f in $(flags)
+		{
+			$(f) on $(to) += [ on $(from) return $($(f)) ] ;
+		}
+	}
+	else
+	{
+		for f in $(flags)
+		{
+			$(f) on $(to) += $($(f)) ;
+		}
 	}
 }
+
 
 #
 # configuration specific subdir c++ flags
