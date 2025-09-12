@@ -1,0 +1,55 @@
+
+#
+# As the rule Objects grists the sources before changing the extension
+# then other rules which use SUFOBJ should do the same. This is important
+# because this project includes sources with the same name which becomes
+# a problem when naming their outputs. 
+#
+rule FGristObjects
+{
+	local objs = [ FGristFiles $(<) ] ;
+	return $(objs:S=$(SUFOBJ)) ;
+}
+
+rule Main
+{
+	MainFromObjects $(<) : [ FGristObjects $(>) ] ;
+	Objects $(>) ;
+}
+
+rule Library
+{
+	LibraryFromObjects $(<) : [ FGristObjects $(>) ] ;
+	Objects $(>) ;
+}
+
+rule ObjectCcFlags
+{
+	CCFLAGS on [ FGristObjects $(<) ] += $(>) ;
+}
+
+rule ObjectC++Flags
+{
+	C++FLAGS on [ FGristObjects $(<) ] += $(>) ;
+}
+
+rule ObjectDefines
+{
+	# must reformat CCDEFS according to current defines
+
+	local s = [ FGristObjects $(<) ] ;
+
+	DEFINES on $(s) += $(>) ;
+	CCDEFS on $(s) = [ on $(s) FDefines $(DEFINES) ] ;
+}
+
+rule ObjectHdrs
+{
+	# Add to HDRS for HdrScan's benefit.
+	# must reformat CCHDRS according to headers
+
+	local s = [ FGristObjects $(<) ] ;
+
+	HDRS on $(s) += $(>) ;
+	CCHDRS on $(s) = [ on $(s) FIncludes $(HDRS) ] ;
+}

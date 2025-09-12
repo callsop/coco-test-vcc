@@ -1,3 +1,4 @@
+include jam/patch.jam ;
 include jam/utils.jam ;
 include jam/main.jam ;
 include jam/vs.jam ;
