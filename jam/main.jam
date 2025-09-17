@@ -16,7 +16,7 @@ INCLUDE = ;
 rule BuildMain cfg : targetname : srcs
 {
     # set sources grist based on config
-    local SOURCE_GRIST = $(cfg) ;
+    local SOURCE_GRIST = [ FGrist $(SUBDIR_TOKENS) $(cfg) ] ;
 
     # config specific target to build
     local target = [ FGristFiles $(targetname) ] ;
@@ -32,9 +32,11 @@ rule BuildMain cfg : targetname : srcs
     local extras = [ FGristFiles $(targetname:S=.ilk) ] ;
 
     # add pdb file for each source (cpp) clean doesn't care if not exist
-    extras += [ FGristFiles $(srcs:BS=.pdb) ] ;
-    MakeLocate $(extras) : $(LOCATE_TARGET) ;
-    Clean clean : $(extras) ;
+	#local pdbs = [ FGristObjects $(srcs) ] ;
+	#pdbs = $(pdbs:S=.pdb) ;
+    #extras += $(pdbs) ;
+    #MakeLocate $(extras) : $(LOCATE_TARGET) ;
+    #Clean clean : $(extras) ;
 
 	BuildExtras $(target) ;
 }
@@ -52,7 +54,7 @@ rule ConfigMain cfgs : targetname : srcs
 #
 # override standard link rule as it should set LINKFLAGS/LINKLIBS on target
 #
-rule Link
+rule Link t : s
 {
     MODE on $(<) = $(EXEMODE) ;
     Chmod $(<) ;
@@ -67,7 +69,7 @@ rule Link
 #
 # add additional link flags until next subdir
 #
-rule SubDirLinkFlags $(<)
+rule SubDirLinkFlags 
 {
     SUBDIRLINKFLAGS += $(<) ;
 }
@@ -75,9 +77,40 @@ rule SubDirLinkFlags $(<)
 #
 # add additional link libraries until next subdir
 #
-rule SubDirLinkLibs $(<)
+rule SubDirLinkLibs 
 {
     SUBDIRLINKLIBS += $(<) ;
 }
 
 SUBDIRRESET += LINKFLAGS LINKLIBS ;
+
+#
+# promote variables 'from' config 'to' config
+#
+rule Promote flags : to : from
+{
+	local f ;
+	if $(from)
+	{
+		for f in $(flags)
+		{
+			$(f) on $(to) += [ on $(from) return $($(f)) ] ;
+		}
+	}
+	else
+	{
+		for f in $(flags)
+		{
+			$(f) on $(to) += $($(f)) ;
+		}
+	}
+}
+
+
+#
+# configuration specific subdir c++ flags
+#
+rule ConfigSubDirC++Flags cfg : flags
+{
+	SUBDIRC++FLAGS on $(cfg) += $(flags) ;
+}

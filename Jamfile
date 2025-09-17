@@ -1,66 +1,65 @@
+
+#################################################################
+# common rules
+#################################################################
+
+# all configurations to build
+CONFIGS = debug release directx opengl dbgaudio logging ;
+
+rule SubDirSetup
+{
+	# locate output targets for each config
+	rule SetLocateTarget cfg
+	{
+		LOCATE_TARGET on $(cfg) = [ FDirName build $(cfg) $(SUBDIR_TOKENS) ] ;
+	}
+
+	ForEachConfig $(CONFIGS) : SetLocateTarget ;
+
+	# reset all subdir options to default
+	SUBDIR$(SUBDIRRESET) on $(CONFIGS) = ;
+}
+
+SUBDIRRULES = SubDirSetup ;
+
 #################################################################
 # vcc build
 #################################################################
 
 SubDir TOP ;
 
-# all configurations to build
-CONFIGS = debug release directx opengl dbgaudio ;
-
-# locate output targets here
-rule SetLocateTarget cfg
-{
-	LOCATE_TARGET on $(cfg) = [ FDirName $(SUBDIR) build $(cfg) ] ;
-}
-
-ForEachConfig $(CONFIGS) : SetLocateTarget ;
-
 # set where the sources are located
 SEARCH_SOURCE = VCC ;
 
-# resource file
-RESOURCE = [ Glob [ FDirName $(SUBDIR) $(SEARCH_SOURCE) ] : *.rc ] ;
-RESOURCE = $(RESOURCE:BS) ;
-
-# name used for linking
-RESOURCE_SRC = res-$(RESOURCE) ;
-
 # collect the sources
-SRCS = [ Glob [ FDirName $(SUBDIR) $(SEARCH_SOURCE) ] : *.cpp ] ;
-SRCS += $(RESOURCE_SRC) ;
+SRCS = [ Glob $(SEARCH_SOURCE) : *.cpp *.rc ] ;
 
 # collect all roms
-ROMS = [ Glob [ FDirName $(SUBDIR) roms ] : *.rom ] ;
+ROMS = [ Glob roms : *.rom ] ;
 
 # extra includes for vcc
-3RDPARTY = [ FDirName $(SUBDIR) VCC 3rdParty ] ;
+3RDPARTY = [ FDirName VCC 3rdParty ] ;
+
+Promote SUBDIRC++FLAGS : $(CONFIGS) ;
+Promote SUBDIRC++FLAGS : directx opengl : release ;
+Promote SUBDIRC++FLAGS : dbgaudio logging : debug ;
 
 # libraries required
 SubDirLinkLibs kernel32.lib user32.lib gdi32.lib dsound.lib ddraw.lib ;
 SubDirLinkLibs dinput8.lib dxguid.lib winmm.lib shell32.lib comdlg32.lib ;
 SubDirLinkLibs comctl32.lib ;
-SubDirC++Flags /I$(3RDPARTY) /D_CRT_SECURE_NO_WARNINGS ;
+SubDirLinkFlags /SUBSYSTEM:WINDOWS ;
+
+Promote SUBDIRLINKFLAGS SUBDIRLINKLIBS : $(CONFIGS) ;
 
 # configuration specific compilation flags
-SUBDIRC++FLAGS on directx = /DUSE_OPENGL=false [ on release return $(SUBDIRC++FLAGS) ] ;
-SUBDIRC++FLAGS on opengl = /DUSE_DIRECTX=false [ on release return $(SUBDIRC++FLAGS) ] ;
-SUBDIRC++FLAGS on dbgaudio = /DUSE_DEBUG_AUDIOTAPE=true [ on release return $(SUBDIRC++FLAGS) ] ;
+ConfigSubDirC++Flags $(CONFIGS) : /I$(3RDPARTY) /D_CRT_SECURE_NO_WARNINGS ;
+ConfigSubDirC++Flags directx : /DUSE_OPENGL=false ;
+ConfigSubDirC++Flags opengl : /DUSE_DIRECTX=false ;
+ConfigSubDirC++Flags dbgaudio : /DUSE_DEBUG_AUDIOTAPE=true ;
+ConfigSubDirC++Flags logging : /DUSE_LOGGING=true ;
 
-# copy default release/debug settings
-C++FLAGS on directx opengl = [ on release return $(C++FLAGS) ] ;
-C++FLAGS on dbgaudio = [ on debug return $(C++FLAGS) ] ;
-
-rule MakeResource cfg
-{
-	local rc = [ FGristFiles $(RESOURCE_SRC) ] ;
-
-	File $(rc) : $(RESOURCE) ;
-	Depends $(rc) : $(RESOURCE) ;
-	MakeLocate $(rc) : $(LOCATE_TARGET) ;
-
-	Clean clean : $(rc) ;
-}
-
+# copy a rom to the configuration output
 rule MakeRom
 {
 	File $(<) : $(>) ;
@@ -70,6 +69,7 @@ rule MakeRom
 	Clean clean : $(<) ;
 }
 
+# process all rom files
 rule MakeRoms
 {
 	local rom ;
@@ -85,35 +85,85 @@ rule MakeExtras cfg
     # set sources grist based on config
     local SOURCE_GRIST = $(cfg) ;
 
-	MakeResource $(cfg) ;
 	MakeRoms $(cfg) ;
 }
 
-rule Rc
-{
-	Depends $(<) : $(>) ;
-	Depends res : $(<) ;
-	NotFile res ;
-	FLAGS on $(<) = /nologo /I 0x0409 ;
-	INCLUDES on $(<) = $(WINSDK_INC) ;
-	MakeLocate $(<) : $(LOCATE_TARGET) ;
-}
-
-actions Rc
-{
-	set INCL= /I"$(INCLUDES)" /I"$(SEARCH_SOURCE)"
-	"$(RC)" $(FLAGS) %INCL% /fo$(<) $(>)
-}
-
-rule UserObject
-{
-	Rc $(<) : $(>) ;
-}
+echo $(SUBDIRC++FLAGS) ;
 
 # build main debug/release versions
 ConfigMain $(CONFIGS) : vcc : $(SRCS) ;
 
 # build extras needed
 ForEachConfig $(CONFIGS) : MakeExtras ;
+
+
+rule MakeDllExtras cfg
+{
+	local SOURCE_GRIST = [ FGrist $(SUBDIR_TOKENS) $(cfg) ] ;
+
+	local target = [ FAppendSuffix [ FGristFiles $(name) ] : $(SUFEXE) ] ;
+
+	SOURCE_GRIST = [ FGrist $(cfg) ] ;
+
+	local out = [ FAppendSuffix [ FGristFiles $(name) ] : $(SUFEXE) ] ;
+
+	File $(out) : $(target) ;
+	MakeLocate $(out) : [ FDirName build $(cfg) ] ;
+	Depends $(cfg) : $(out) ;
+}
+
+rule BuildDll name : shared : libs
+{
+	SubDir TOP $(name) ;
+
+	local SEARCH_SOURCE = [ FDirName VCC $(name) ] ;
+	local SRCS = [ Glob $(SEARCH_SOURCE) : *.c *.cpp *.rc ] ;
+
+	# shared 
+	SEARCH_SOURCE += [ FDirName VCC ] ;
+	local SHARED = [ Glob VCC : $(shared) ] ;
+	SRCS += $(SHARED) ;
+
+	Promote SUBDIRC++FLAGS : $(CONFIGS) ;
+	Promote SUBDIRC++FLAGS : directx opengl : release ;
+	Promote SUBDIRC++FLAGS : dbgaudio logging : debug ;
+
+	# libraries required
+	SubDirLinkLibs kernel32.lib user32.lib gdi32.lib dsound.lib ddraw.lib ;
+	SubDirLinkLibs dinput8.lib dxguid.lib winmm.lib shell32.lib comdlg32.lib ;
+	SubDirLinkLibs comctl32.lib $(libs) ;
+	SubDirLinkFlags /DLL /DYNAMICBASE /SUBSYSTEM:CONSOLE ;
+
+	Promote SUBDIRLINKFLAGS SUBDIRLINKLIBS : $(CONFIGS) ;
+
+	# configuration specific compilation flags
+	ConfigSubDirC++Flags $(CONFIGS) : /D_CRT_SECURE_NO_WARNINGS ;
+	ConfigSubDirC++Flags directx : /DUSE_OPENGL=false ;
+	ConfigSubDirC++Flags opengl : /DUSE_DIRECTX=false ;
+	ConfigSubDirC++Flags dbgaudio : /DUSE_DEBUG_AUDIOTAPE=true ;
+	ConfigSubDirC++Flags logging : /DUSE_LOGGING=true ;	
+
+	local SUFEXE = .dll ;
+
+	ConfigMain $(CONFIGS) : $(name) : $(SRCS) ;
+
+	ForEachConfig $(CONFIGS) : MakeDllExtras ;
+}
+
+
+#
+# Build cart dlls, some require shared sources and additional libraries.
+#
+
+BuildDll acia : logger.cpp DialogOps.cpp : ws2_32.lib ;
+#BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
+BuildDll fd502 : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
+BuildDll gmc ;
+BuildDll orch90 : Fileops.cpp ;
+BuildDll harddisk : DialogOps.cpp Fileops.cpp ;
+BuildDll mpi : logger.cpp DialogOps.cpp Fileops.cpp ;
+BuildDll ramdisk : logger.cpp DialogOps.cpp Fileops.cpp ;
+BuildDll sdc : logger.cpp DialogOps.cpp Fileops.cpp : Shlwapi.lib Ole32.lib ;
+BuildDll superide : DialogOps.cpp Fileops.cpp ;
 
 

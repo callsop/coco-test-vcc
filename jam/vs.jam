@@ -74,7 +74,7 @@ actions Link bind NEEDLIBS
 # c++ defaults
 #
 
-C++FLAGS = /nologo /FS /Gd /Zi /std:c++20 /W3 /EHsc ;
+C++FLAGS = /nologo /FS /Gd /Zi /std:c++17 /W3 /EHsc /Zc:strictStrings- ;
 C++FLAGS on debug = $(C++FLAGS) /MDd /Od /D_DEBUG ;
 C++FLAGS on release = $(C++FLAGS) /MD /O2 /DNDEBUG ;
 
@@ -88,5 +88,67 @@ actions C++
     "$(C++)" /c /Fo$(<) /Fd$(<:S=.pdb) $(C++FLAGS) %INCL% $(CCDEFS) $(CCHDRS) $(>)
 }
 
+actions Cc
+{
+    set INCL= /I"$(INCLUDE)"
+    "$(C++)" /c /Fo$(<) /Fd$(<:S=.pdb) $(CC++FLAGS) %INCL% $(CCDEFS) $(CCHDRS) $(>)
+}
+
+
 CheckVS cl.exe : $(C++) ;
 CheckVS link.exe : $(LINK) ;
+
+
+#
+# Resource files
+#
+
+
+rule Rc t : s
+{
+	# build resource outputs into their own directory to avoid name clash
+	local LOCATE_TARGET = [ FDirName $(LOCATE_TARGET) rc ] ;
+	local SOURCE_GRIST = [ FGrist $(SOURCE_GRIST) rc ] ;
+
+	Depends $(<) : $(>) ;
+	Depends res : $(<) ;
+	NotFile res ;
+	FLAGS on $(<) = /nologo /I 0x0409 ;
+	INCLUDES on $(<) = $(WINSDK_INC) $(SEARCH_SOURCE) ;
+	MakeLocate $(<) : $(LOCATE_TARGET) ;
+}
+
+actions Rc
+{
+	set INCL= /I"$(INCLUDES)" 
+	"$(RC)" $(FLAGS) %INCL% /fo$(<) $(>)
+}
+
+rule UserObject t : s
+{
+	switch $(>:S)
+	{
+		case .rc : Rc $(<) : $(>) ;
+	}
+}
+
+rule FGristFiles files
+{
+	local f l ;
+	local RC_SOURCE_GRIST = [ FGrist $(SOURCE_GRIST) rc ] ;
+	for f in $(files)
+	{
+		switch $(f:S)
+		{
+			# no need to re-grist object files
+			case .obj : l += $(f) ;
+
+			# handle rc files to avoid name clashes
+			case .rc : l += $(f:G=$(RC_SOURCE_GRIST)) ;
+
+			# default grist
+			case * : l += $(f:G=$(SOURCE_GRIST:E)) ;
+		}
+	}
+	return $(l) ;
+}
