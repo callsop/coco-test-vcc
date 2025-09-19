@@ -156,7 +156,7 @@ rule BuildDll name : shared : libs
 #
 
 BuildDll acia : logger.cpp DialogOps.cpp : ws2_32.lib ;
-#BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
+BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
 BuildDll fd502 : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
 BuildDll gmc ;
 BuildDll orch90 : Fileops.cpp ;
