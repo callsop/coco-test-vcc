@@ -40,24 +40,26 @@ ROMS = [ Glob roms : *.rom ] ;
 # extra includes for vcc
 3RDPARTY = [ FDirName VCC 3rdParty ] ;
 
-Promote SUBDIRC++FLAGS : $(CONFIGS) ;
-Promote SUBDIRC++FLAGS : directx opengl : release ;
-Promote SUBDIRC++FLAGS : dbgaudio logging : debug ;
+rule ConfigureBuild
+{
+	Promote SUBDIRC++FLAGS : $(CONFIGS) ;
+	Promote SUBDIRC++FLAGS : directx opengl : release ;
+	Promote SUBDIRC++FLAGS : dbgaudio logging : debug ;
 
-# libraries required
-SubDirLinkLibs kernel32.lib user32.lib gdi32.lib dsound.lib ddraw.lib ;
-SubDirLinkLibs dinput8.lib dxguid.lib winmm.lib shell32.lib comdlg32.lib ;
-SubDirLinkLibs comctl32.lib ;
-SubDirLinkFlags /SUBSYSTEM:WINDOWS ;
+	# libraries required
+	SubDirLinkLibs kernel32.lib user32.lib gdi32.lib dsound.lib ddraw.lib ;
+	SubDirLinkLibs dinput8.lib dxguid.lib winmm.lib shell32.lib comdlg32.lib ;
+	SubDirLinkLibs comctl32.lib ;
 
-Promote SUBDIRLINKFLAGS SUBDIRLINKLIBS : $(CONFIGS) ;
+	Promote SUBDIRLINKFLAGS SUBDIRLINKLIBS : $(CONFIGS) ;
 
-# configuration specific compilation flags
-ConfigSubDirC++Flags $(CONFIGS) : /I$(3RDPARTY) /D_CRT_SECURE_NO_WARNINGS ;
-ConfigSubDirC++Flags directx : /DUSE_OPENGL=false ;
-ConfigSubDirC++Flags opengl : /DUSE_DIRECTX=false ;
-ConfigSubDirC++Flags dbgaudio : /DUSE_DEBUG_AUDIOTAPE=true ;
-ConfigSubDirC++Flags logging : /DUSE_LOGGING=true ;
+	# configuration specific compilation flags
+	ConfigSubDirC++Flags $(CONFIGS) : /I$(3RDPARTY) /D_CRT_SECURE_NO_WARNINGS ;
+	ConfigSubDirC++Flags directx : /DUSE_OPENGL=false ;
+	ConfigSubDirC++Flags opengl : /DUSE_DIRECTX=false ;
+	ConfigSubDirC++Flags dbgaudio : /DUSE_DEBUG_AUDIOTAPE=true ;
+	ConfigSubDirC++Flags logging : /DUSE_LOGGING=true ;
+}
 
 # copy a rom to the configuration output
 rule MakeRom
@@ -88,7 +90,8 @@ rule MakeExtras cfg
 	MakeRoms $(cfg) ;
 }
 
-echo $(SUBDIRC++FLAGS) ;
+SubDirLinkFlags /SUBSYSTEM:WINDOWS ;
+ConfigureBuild ;
 
 # build main debug/release versions
 ConfigMain $(CONFIGS) : vcc : $(SRCS) ;
@@ -124,24 +127,9 @@ rule BuildDll name : shared : libs
 	local SHARED = [ Glob VCC : $(shared) ] ;
 	SRCS += $(SHARED) ;
 
-	Promote SUBDIRC++FLAGS : $(CONFIGS) ;
-	Promote SUBDIRC++FLAGS : directx opengl : release ;
-	Promote SUBDIRC++FLAGS : dbgaudio logging : debug ;
-
-	# libraries required
-	SubDirLinkLibs kernel32.lib user32.lib gdi32.lib dsound.lib ddraw.lib ;
-	SubDirLinkLibs dinput8.lib dxguid.lib winmm.lib shell32.lib comdlg32.lib ;
-	SubDirLinkLibs comctl32.lib $(libs) ;
+	SubDirLinkLibs $(libs) ;
 	SubDirLinkFlags /DLL /DYNAMICBASE /SUBSYSTEM:CONSOLE ;
-
-	Promote SUBDIRLINKFLAGS SUBDIRLINKLIBS : $(CONFIGS) ;
-
-	# configuration specific compilation flags
-	ConfigSubDirC++Flags $(CONFIGS) : /D_CRT_SECURE_NO_WARNINGS ;
-	ConfigSubDirC++Flags directx : /DUSE_OPENGL=false ;
-	ConfigSubDirC++Flags opengl : /DUSE_DIRECTX=false ;
-	ConfigSubDirC++Flags dbgaudio : /DUSE_DEBUG_AUDIOTAPE=true ;
-	ConfigSubDirC++Flags logging : /DUSE_LOGGING=true ;	
+	ConfigureBuild ;
 
 	local SUFEXE = .dll ;
 
