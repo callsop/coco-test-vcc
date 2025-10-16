@@ -39,6 +39,7 @@ ROMS = [ Glob roms : *.rom ] ;
 
 # extra includes for vcc
 3RDPARTY = [ FDirName VCC 3rdParty ] ;
+COMMONLIB = [ FDirName VCC libcommon include ] ;
 
 rule ConfigureBuild
 {
@@ -54,7 +55,7 @@ rule ConfigureBuild
 	Promote SUBDIRLINKFLAGS SUBDIRLINKLIBS : $(CONFIGS) ;
 
 	# configuration specific compilation flags
-	ConfigSubDirC++Flags $(CONFIGS) : /I$(3RDPARTY) /D_CRT_SECURE_NO_WARNINGS ;
+	ConfigSubDirC++Flags $(CONFIGS) : /I$(3RDPARTY) /I$(COMMONLIB) /D_CRT_SECURE_NO_WARNINGS ;
 	ConfigSubDirC++Flags directx : /DUSE_OPENGL=false ;
 	ConfigSubDirC++Flags opengl : /DUSE_DIRECTX=false ;
 	ConfigSubDirC++Flags dbgaudio : /DUSE_DEBUG_AUDIOTAPE=true ;
@@ -82,6 +83,17 @@ rule MakeRoms
 	NotFile roms ;
 }
 
+rule MakeTarget targetname
+{
+    # set sources grist based on config
+    local SOURCE_GRIST = [ FGrist $(SUBDIR_TOKENS) $(cfg) ] ;
+
+    # config specific target to build
+    local target = [ FGristFiles $(targetname) ] ;	
+
+	return $(target:S=$(SUFEXE)) ;
+}
+
 rule MakeExtras cfg
 {
     # set sources grist based on config
@@ -90,8 +102,20 @@ rule MakeExtras cfg
 	MakeRoms $(cfg) ;
 }
 
+rule ConfigLinkPath
+{
+	local target = [ MakeTarget vcc ] ;
+	local libpath = [ FDirName $(LOCATE_TARGET) libcommon ] ;
+
+	LINKPATH on $(target) = $(LINKPATH) $(libpath) ;
+
+	Depends $(target) : $(libpath:S=.dll) ;
+}
+
 SubDirLinkFlags /SUBSYSTEM:WINDOWS ;
+SubDirLinkLibs libcommon.lib ;
 ConfigureBuild ;
+ForEachConfig $(CONFIGS) : ConfigLinkPath ;
 
 # build main debug/release versions
 ConfigMain $(CONFIGS) : vcc : $(SRCS) ;
@@ -138,20 +162,54 @@ rule BuildDll name : shared : libs
 	ForEachConfig $(CONFIGS) : MakeDllExtras ;
 }
 
+rule BuildCommonDll name : shared : libs
+{
+	SubDir TOP $(name) ;
+
+	local SEARCH_SOURCE = [ FDirName VCC libcommon src ] ;
+	local SRCS = [ Glob $(SEARCH_SOURCE) : *.cpp ] ;
+
+	# shared 
+	SEARCH_SOURCE += [ FDirName VCC libcommon src core ] ;
+	local SHARED = [ Glob $(SEARCH_SOURCE[2]) : *.cpp ] ;
+	SRCS += $(SHARED) ;
+
+	SEARCH_SOURCE += [ FDirName VCC libcommon src core cartridges ] ;
+	local SHARED = [ Glob $(SEARCH_SOURCE[3]) : *.cpp ] ;
+	SRCS += $(SHARED) ;
+
+	ConfigSubDirC++Flags $(CONFIGS) : /DLIBCOMMON_EXPORTS ;
+	SubDirLinkLibs $(libs) ;
+	SubDirLinkFlags /DLL /DYNAMICBASE /SUBSYSTEM:CONSOLE ;
+	ConfigureBuild ;
+
+	local SUFEXE = .dll ;
+
+	ConfigMain $(CONFIGS) : $(name) : $(SRCS) ;
+
+	ForEachConfig $(CONFIGS) : MakeDllExtras ;
+
+	EchoVar target ;
+
+
+}
+
+BuildCommonDll libcommon ;
+
 
 #
 # Build cart dlls, some require shared sources and additional libraries.
 #
 
-BuildDll acia : logger.cpp DialogOps.cpp : ws2_32.lib ;
-BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
-BuildDll fd502 : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
-BuildDll gmc ;
-BuildDll orch90 : Fileops.cpp ;
-BuildDll harddisk : DialogOps.cpp Fileops.cpp ;
-BuildDll mpi : logger.cpp DialogOps.cpp Fileops.cpp ;
-BuildDll ramdisk : logger.cpp DialogOps.cpp Fileops.cpp ;
-BuildDll sdc : logger.cpp DialogOps.cpp Fileops.cpp : Shlwapi.lib Ole32.lib ;
-BuildDll superide : DialogOps.cpp Fileops.cpp ;
+#BuildDll acia : logger.cpp DialogOps.cpp : ws2_32.lib ;
+#BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
+#BuildDll fd502 : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
+#BuildDll gmc ;
+#BuildDll orch90 : Fileops.cpp ;
+#BuildDll harddisk : DialogOps.cpp Fileops.cpp ;
+#BuildDll mpi : logger.cpp DialogOps.cpp Fileops.cpp ;
+#BuildDll ramdisk : logger.cpp DialogOps.cpp Fileops.cpp ;
+#BuildDll sdc : logger.cpp DialogOps.cpp Fileops.cpp : Shlwapi.lib Ole32.lib ;
+#BuildDll superide : DialogOps.cpp Fileops.cpp ;
 
 

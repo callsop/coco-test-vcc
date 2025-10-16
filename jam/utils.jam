@@ -8,13 +8,13 @@ NEWLINE = "
 #
 # e.g. ForEachConfig debug release : Main main : $(srcs) ;
 #
-rule ForEachConfig cfg : rul
+rule ForEachConfig cfgs : rul
 {
-    local c ;
-    for c in $(cfg)
+    local cfg ;
+    for cfg in $(cfgs)
     {
-        NotFile $(c) ;
-        on $(c) $(rul[1]) $(c) : $(rul[2]) : $(3) : $(4) : $(5) ;
+        NotFile $(cfg) ;
+        on $(cfg) $(rul[1]) $(cfg) : $(rul[2]) : $(3) : $(4) : $(5) ;
     }
 }
 
