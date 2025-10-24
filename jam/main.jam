@@ -38,8 +38,6 @@ rule BuildMain cfg : targetname : srcs
     #MakeLocate $(extras) : $(LOCATE_TARGET) ;
     #Clean clean : $(extras) ;
 
-	EchoVar target ;
-
 	BuildExtras $(target) ;
 }
 

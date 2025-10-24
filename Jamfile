@@ -83,17 +83,6 @@ rule MakeRoms
 	NotFile roms ;
 }
 
-rule MakeTarget targetname
-{
-    # set sources grist based on config
-    local SOURCE_GRIST = [ FGrist $(SUBDIR_TOKENS) $(cfg) ] ;
-
-    # config specific target to build
-    local target = [ FGristFiles $(targetname) ] ;	
-
-	return $(target:S=$(SUFEXE)) ;
-}
-
 rule MakeExtras cfg
 {
     # set sources grist based on config
@@ -102,20 +91,25 @@ rule MakeExtras cfg
 	MakeRoms $(cfg) ;
 }
 
-rule ConfigLinkPath
+# for all other targets they all depend on libcommon
+rule BuildExtras target
 {
-	local target = [ MakeTarget vcc ] ;
-	local libpath = [ FDirName $(LOCATE_TARGET) libcommon ] ;
+	if $(target:B) != libcommon
+	{
+		local target = $(target:S=$(SUFEXE)) ;
 
-	LINKPATH on $(target) = $(LINKPATH) $(libpath) ;
+		local SOURCE_GRIST = [ FGrist libcommon $(cfg) ] ;
+		local libtarget = [ FGristFiles libcommon ] ;
 
-	Depends $(target) : $(libpath:S=.dll) ;
+		NEEDLIBS on $(target) = $(libtarget:S=.dll) ;
+		Depends $(target) : $(libtarget:S=.dll) ;
+		Echo Depends $(target) \: $(libtarget:S=.dll) ;
+	}
 }
 
+
 SubDirLinkFlags /SUBSYSTEM:WINDOWS ;
-SubDirLinkLibs libcommon.lib ;
 ConfigureBuild ;
-ForEachConfig $(CONFIGS) : ConfigLinkPath ;
 
 # build main debug/release versions
 ConfigMain $(CONFIGS) : vcc : $(SRCS) ;
@@ -146,11 +140,6 @@ rule BuildDll name : shared : libs
 	local SEARCH_SOURCE = [ FDirName VCC $(name) ] ;
 	local SRCS = [ Glob $(SEARCH_SOURCE) : *.c *.cpp *.rc ] ;
 
-	# shared 
-	SEARCH_SOURCE += [ FDirName VCC ] ;
-	local SHARED = [ Glob VCC : $(shared) ] ;
-	SRCS += $(SHARED) ;
-
 	SubDirLinkLibs $(libs) ;
 	SubDirLinkFlags /DLL /DYNAMICBASE /SUBSYSTEM:CONSOLE ;
 	ConfigureBuild ;
@@ -166,17 +155,8 @@ rule BuildCommonDll name : shared : libs
 {
 	SubDir TOP $(name) ;
 
-	local SEARCH_SOURCE = [ FDirName VCC libcommon src ] ;
-	local SRCS = [ Glob $(SEARCH_SOURCE) : *.cpp ] ;
-
-	# shared 
-	SEARCH_SOURCE += [ FDirName VCC libcommon src core ] ;
-	local SHARED = [ Glob $(SEARCH_SOURCE[2]) : *.cpp ] ;
-	SRCS += $(SHARED) ;
-
-	SEARCH_SOURCE += [ FDirName VCC libcommon src core cartridges ] ;
-	local SHARED = [ Glob $(SEARCH_SOURCE[3]) : *.cpp ] ;
-	SRCS += $(SHARED) ;
+	local SRCS = [ GlobRecursive [ FDirName VCC libcommon ] : *.cpp ] ;
+	local SEARCH_SOURCE = [ Unique $(SRCS:P) ] ;
 
 	ConfigSubDirC++Flags $(CONFIGS) : /DLIBCOMMON_EXPORTS ;
 	SubDirLinkLibs $(libs) ;
@@ -188,10 +168,6 @@ rule BuildCommonDll name : shared : libs
 	ConfigMain $(CONFIGS) : $(name) : $(SRCS) ;
 
 	ForEachConfig $(CONFIGS) : MakeDllExtras ;
-
-	EchoVar target ;
-
-
 }
 
 BuildCommonDll libcommon ;
@@ -201,15 +177,15 @@ BuildCommonDll libcommon ;
 # Build cart dlls, some require shared sources and additional libraries.
 #
 
-#BuildDll acia : logger.cpp DialogOps.cpp : ws2_32.lib ;
-#BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
-#BuildDll fd502 : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
-#BuildDll gmc ;
-#BuildDll orch90 : Fileops.cpp ;
-#BuildDll harddisk : DialogOps.cpp Fileops.cpp ;
-#BuildDll mpi : logger.cpp DialogOps.cpp Fileops.cpp ;
-#BuildDll ramdisk : logger.cpp DialogOps.cpp Fileops.cpp ;
-#BuildDll sdc : logger.cpp DialogOps.cpp Fileops.cpp : Shlwapi.lib Ole32.lib ;
-#BuildDll superide : DialogOps.cpp Fileops.cpp ;
+BuildDll acia : logger.cpp DialogOps.cpp : ws2_32.lib ;
+BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
+BuildDll fd502 : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
+BuildDll gmc ;
+BuildDll orch90 : Fileops.cpp ;
+BuildDll harddisk : DialogOps.cpp Fileops.cpp ;
+BuildDll mpi : logger.cpp DialogOps.cpp Fileops.cpp ;
+BuildDll ramdisk : logger.cpp DialogOps.cpp Fileops.cpp ;
+BuildDll sdc : logger.cpp DialogOps.cpp Fileops.cpp : Shlwapi.lib Ole32.lib ;
+BuildDll superide : DialogOps.cpp Fileops.cpp ;
 
 
