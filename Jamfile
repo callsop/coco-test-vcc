@@ -103,7 +103,6 @@ rule BuildExtras target
 
 		NEEDLIBS on $(target) = $(libtarget:S=.dll) ;
 		Depends $(target) : $(libtarget:S=.dll) ;
-		Echo Depends $(target) \: $(libtarget:S=.dll) ;
 	}
 }
 
@@ -133,59 +132,45 @@ rule MakeDllExtras cfg
 	Depends $(cfg) : $(out) ;
 }
 
-rule BuildDll name : shared : libs
+rule BuildDll name : libs
 {
 	SubDir TOP $(name) ;
 
+	local SUFEXE = .dll ;
 	local SEARCH_SOURCE = [ FDirName VCC $(name) ] ;
-	local SRCS = [ Glob $(SEARCH_SOURCE) : *.c *.cpp *.rc ] ;
+	local SRCS = [ GlobRecursive $(SEARCH_SOURCE) : *.cpp *.rc ] ;
+	SEARCH_SOURCE = [ Unique $(SRCS:P) ] ;
+
+	if $(name) = libcommon
+	{
+		ConfigSubDirC++Flags $(CONFIGS) : /DLIBCOMMON_EXPORTS ;		
+	}
 
 	SubDirLinkLibs $(libs) ;
 	SubDirLinkFlags /DLL /DYNAMICBASE /SUBSYSTEM:CONSOLE ;
 	ConfigureBuild ;
-
-	local SUFEXE = .dll ;
 
 	ConfigMain $(CONFIGS) : $(name) : $(SRCS) ;
 
 	ForEachConfig $(CONFIGS) : MakeDllExtras ;
 }
 
-rule BuildCommonDll name : shared : libs
-{
-	SubDir TOP $(name) ;
-
-	local SRCS = [ GlobRecursive [ FDirName VCC libcommon ] : *.cpp ] ;
-	local SEARCH_SOURCE = [ Unique $(SRCS:P) ] ;
-
-	ConfigSubDirC++Flags $(CONFIGS) : /DLIBCOMMON_EXPORTS ;
-	SubDirLinkLibs $(libs) ;
-	SubDirLinkFlags /DLL /DYNAMICBASE /SUBSYSTEM:CONSOLE ;
-	ConfigureBuild ;
-
-	local SUFEXE = .dll ;
-
-	ConfigMain $(CONFIGS) : $(name) : $(SRCS) ;
-
-	ForEachConfig $(CONFIGS) : MakeDllExtras ;
-}
-
-BuildCommonDll libcommon ;
 
 
 #
 # Build cart dlls, some require shared sources and additional libraries.
 #
 
-BuildDll acia : logger.cpp DialogOps.cpp : ws2_32.lib ;
-BuildDll becker : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
-BuildDll fd502 : logger.cpp DialogOps.cpp Fileops.cpp : ws2_32.lib ;
+BuildDll libcommon ;
+BuildDll acia : ws2_32.lib ;
+BuildDll becker : ws2_32.lib ;
+BuildDll fd502 : ws2_32.lib ;
 BuildDll gmc ;
-BuildDll orch90 : Fileops.cpp ;
-BuildDll harddisk : DialogOps.cpp Fileops.cpp ;
-BuildDll mpi : logger.cpp DialogOps.cpp Fileops.cpp ;
-BuildDll ramdisk : logger.cpp DialogOps.cpp Fileops.cpp ;
-BuildDll sdc : logger.cpp DialogOps.cpp Fileops.cpp : Shlwapi.lib Ole32.lib ;
-BuildDll superide : DialogOps.cpp Fileops.cpp ;
+BuildDll orch90 ;
+BuildDll harddisk ;
+BuildDll mpi  ;
+BuildDll ramdisk ;
+BuildDll sdc : Shlwapi.lib Ole32.lib ;
+BuildDll superide ;
 
 
