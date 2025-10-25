@@ -101,22 +101,13 @@ rule BuildExtras target
 		local SOURCE_GRIST = [ FGrist libcommon $(cfg) ] ;
 		local libtarget = [ FGristFiles libcommon ] ;
 
+		# depend on the .dll as its the target however link rule uses .lib
 		NEEDLIBS on $(target) = $(libtarget:S=.dll) ;
 		Depends $(target) : $(libtarget:S=.dll) ;
 	}
 }
 
-
-SubDirLinkFlags /SUBSYSTEM:WINDOWS ;
-ConfigureBuild ;
-
-# build main debug/release versions
-ConfigMain $(CONFIGS) : vcc : $(SRCS) ;
-
-# build extras needed
-ForEachConfig $(CONFIGS) : MakeExtras ;
-
-
+# assumes name is the target
 rule MakeDllExtras cfg
 {
 	local SOURCE_GRIST = [ FGrist $(SUBDIR_TOKENS) $(cfg) ] ;
@@ -127,6 +118,7 @@ rule MakeDllExtras cfg
 
 	local out = [ FAppendSuffix [ FGristFiles $(name) ] : $(SUFEXE) ] ;
 
+	# copy final dll to output directory
 	File $(out) : $(target) ;
 	MakeLocate $(out) : [ FDirName build $(cfg) ] ;
 	Depends $(cfg) : $(out) ;
@@ -156,12 +148,30 @@ rule BuildDll name : libs
 }
 
 
+#
+# Build main executable
+#
+
+SubDirLinkFlags /SUBSYSTEM:WINDOWS ;
+ConfigureBuild ;
+
+# build main debug/release versions
+ConfigMain $(CONFIGS) : vcc : $(SRCS) ;
+
+# build extras needed
+ForEachConfig $(CONFIGS) : MakeExtras ;
+
 
 #
-# Build cart dlls, some require shared sources and additional libraries.
+# Build shared library.
 #
 
 BuildDll libcommon ;
+
+#
+# Build cart dlls, some require additional libraries.
+#
+
 BuildDll acia : ws2_32.lib ;
 BuildDll becker : ws2_32.lib ;
 BuildDll fd502 : ws2_32.lib ;
