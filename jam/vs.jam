@@ -66,7 +66,7 @@ LINKPATH += "$(VS)\\lib\\x86" ;
 actions Link bind NEEDLIBS
 {
     set LIBPATH= /libpath:"$(LINKPATH)"
-    "$(LINK)" /DEBUG /out:$(<) $(LINKFLAGS) $(UNDEFS) %LIBPATH% $(LINKLIBS) $(NEEDLIBS) $(>)
+    "$(LINK)" /DEBUG /out:$(<) $(LINKFLAGS) $(UNDEFS) %LIBPATH% $(LINKLIBS) $(NEEDLIBS:S=.lib) $(>)
 }
 
 ###########################################################################################

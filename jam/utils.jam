@@ -8,13 +8,13 @@ NEWLINE = "
 #
 # e.g. ForEachConfig debug release : Main main : $(srcs) ;
 #
-rule ForEachConfig cfg : rul
+rule ForEachConfig cfgs : rul
 {
-    local c ;
-    for c in $(cfg)
+    local cfg ;
+    for cfg in $(cfgs)
     {
-        NotFile $(c) ;
-        on $(c) $(rul[1]) $(c) : $(rul[2]) : $(3) : $(4) : $(5) ;
+        NotFile $(cfg) ;
+        on $(cfg) $(rul[1]) $(cfg) : $(rul[2]) : $(3) : $(4) : $(5) ;
     }
 }
 
@@ -60,6 +60,42 @@ rule Exists
     }
 
     return ;
+}
+
+#
+# Glob all paths in 'path' for 'pattern'
+#
+rule GlobRecursive path : pattern
+{
+	local l ;
+	local paths = [ Glob $(path) : * ] ;
+	local results = [ Glob $(path) : $(pattern) ] ;
+
+	for l in $(paths)
+	{
+		if ! $(l:S)
+		{
+			results += [ GlobRecursive $(l) : $(pattern) ] ;
+		}
+	}
+	return $(results) ;
+}
+
+#
+# Strip duplicates from list.
+#
+rule Unique list
+{
+	local i ;
+	local results ;
+	for i in $(list)
+	{
+		if ! $(i) in $(results)
+		{
+			results += $(i) ;
+		}
+	}
+	return $(results) ;
 }
 
 #
